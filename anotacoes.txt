@@ -4,3 +4,9 @@ Documentação sockets:
 
 Relogio de lamport:
   https://github.com/MrinmoyShyam/lamports_clock #implementação bem simples
+
+Exclusão mutua:
+  https://www.geeksforgeeks.org/operating-systems/lamports-algorithm-for-mutual-exclusion-in-distributed-system/
+
+Bully:
+  https://www.geeksforgeeks.org/dsa/election-algorithm-and-distributed-processing/
