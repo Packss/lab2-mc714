@@ -212,14 +212,34 @@ if __name__ == "__main__":
     time.sleep(1)
 
     while True:
-        comando = input("\nComandos: [1] Mensagem de texto, [2] Sair\n")
+        print(f"Comandos interativos (Nó: {node.id_node} | Lider: {node.coordenador}")
+        print("[1] Gerar evento local")
+        print("[2] Enviar ping (sincroniza lamport)")
+        print("[3] Forçar eleição")
+        print("[4] Requisitar região crítica (Exclusão mutua)")
+        print("[5] Mandar uma mensagem de texto")
+        print("[6] Sair")
+        comando = input("Selecione uma opção: ")
+
         if comando == "1":
+            node.incrementa_relogio()
+            node.log("Evento interno gerado")
+        elif comando == "2":
+            try:
+                alvo = int(input("ID do nó destino: "))
+                node.manda_mensagem(alvo, "PING")
+            except ValueError: pass
+        elif comando == "3":
+            node.comeca_eleicao()
+        elif comando == "4":
+            threading.Thread(target=node.pedir_secao_critica, daemon=True).start()
+        elif comando == "5":
             try:
                 alvo = int(input("ID do nó destino: "))
                 texto = input("Digite a mensagem a enviar: ")
                 node.manda_mensagem(alvo, "TESTE", {"texto": texto})
             except ValueError:
                 print("Valores invalidos")
-        elif comando == "2":
+        elif comando == "6":
             print("Desconectando nó")
             break
