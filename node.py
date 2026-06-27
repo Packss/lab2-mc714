@@ -16,6 +16,11 @@ class Node:
     def log(self, mensagem):
         print(f"[Nó {self.id_node}] [Relogio: {self.lamport_clock}] {mensagem}")
 
+    def incrementa_relogio(self):
+        with self.lock:
+            self.lamport_clock += 1
+        self.log("Relogio atualizado")
+
     def incia_servidor(self):
         servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -45,8 +50,7 @@ class Node:
             return False
 
         # evento então incrementamos antes de enviar
-        with self.lock:
-            self.lamport_clock += 1
+        self.incrementa_relogio()
 
         msg = {
             "sender": self.id_node,
@@ -73,8 +77,7 @@ class Node:
         conteudo = msg["content"]
         relogio_recebido = msg["clock"]
 
-        with self.lock:
-            self.lamport_clock = max(self.lamport_clock, relogio_recebido) + 1
+        self.incrementa_relogio()
 
         self.log(f"Mensagem recebida do nó {sender} | Tipo: {tipo_msg} | Conteúdo: {conteudo}")
 
