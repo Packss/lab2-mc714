@@ -96,8 +96,7 @@ class Node:
             if self.id_node > sender:
                 self.manda_mensagem(sender, "BULLY_ANSWER")
                 if not self.eleicao_ativa:
-                    threading.Thread(
-                        target=self.comeca_eleicao, daemon=True).start()
+                    threading.Thread(target=self.comeca_eleicao, daemon=True).start()
 
         elif tipo_msg == "BULLY_ANSWER":
             self.recebeu_resposta = True
@@ -116,18 +115,21 @@ class Node:
 
             if nossa_prioridade:
                 self.log(f"Exclusão mutua: Adiou resposta para nó {sender} (Estou usando ou quero usar com mais prioridade")
-                self.respostas_adiadas.append(sender)
+                with self.lock:
+                    self.respostas_adiadas.append(sender)
             else:
                 self.log(f"Exclusão mutua: Enviando OK para o nó {sender}")
                 self.manda_mensagem(sender, "RA_REPLY")
 
         elif tipo_msg == "RA_REPLY":
+            gatilho = False
             with self.lock:
                 self.respostas_necessarias -= 1
                 self.log(f"Exclusão mutua: Recebemos OK. Restam {self.respostas_necessarias}")
                 if self.respostas_necessarias == 0 and self.estado == "WANTED":
-                    threading.Thread(
-                        target=self.entrar_secao_critica, daemon=True).start()
+                    gatilho = True
+            if gatilho:
+                threading.Thread(target=self.entrar_secao_critica, daemon=True).start()
 
     def comeca_eleicao(self):
         self.log("BULLY: Iniciando eleição")
@@ -178,20 +180,22 @@ class Node:
                         self.entrar_secao_critica()
 
     def entrar_secao_critica(self):
-        self.estado = "HELD"
+        with self.lock:
+            self.estado = "HELD"
         self.log("Entramos na região crítica (acessando recurso compartilhado)")
 
         # simulando o uso de um recurso
         time.sleep(5)
 
         self.log("Saindo da região crítica")
-        self.estado = "RELEASED"
-
         with self.lock:
-            for id in self.respostas_adiadas:
-                self.log(f"Exclusão mutua: Liberando nó {id} que estava aguardando")
-                self.manda_mensagem(id, "RA_REPLY")
+            self.estado = "RELEASED"
+            respostas_a_enviar = list(self.respostas_adiadas)
             self.respostas_adiadas = []
+
+        for id in respostas_a_enviar:
+            self.log(f"Exclusão mutua: Liberando nó {id} que estava aguardando")
+            self.manda_mensagem(id, "RA_REPLY")
 
 
 if __name__ == "__main__":
