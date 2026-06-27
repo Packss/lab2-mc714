@@ -25,8 +25,7 @@ class Node:
         self.respostas_adiadas = []
 
     def log(self, mensagem):
-        print(f"[Nó {self.id_node}] [Relogio: {
-              self.lamport_clock}] {mensagem}")
+        print(f"[Nó {self.id_node}] [Relogio: {self.lamport_clock}] {mensagem}")
 
     def incrementa_relogio(self):
         with self.lock:
@@ -43,8 +42,7 @@ class Node:
         while True:
             conn, _ = servidor.accept()
             # tava travando o servidor então resolvi usar thread
-            threading.Thread(target=self.prepara_cliente,
-                             args=(conn,), daemon=True).start()
+            threading.Thread(target=self.prepara_cliente, args=(conn,), daemon=True).start()
 
     def prepara_cliente(self, conn):
         try:
@@ -92,8 +90,7 @@ class Node:
 
         self.incrementa_relogio()
 
-        self.log(f"Mensagem recebida do nó {sender} | Tipo: {
-                 tipo_msg} | Conteúdo: {conteudo}")
+        self.log(f"Mensagem recebida do nó {sender} | Tipo: {tipo_msg} | Conteúdo: {conteudo}")
 
         if tipo_msg == "BULLY_ELECTION":
             if self.id_node > sender:
@@ -118,8 +115,7 @@ class Node:
                     self.relogio_recebido < relogio_req or (self.relogio_recebido == relogio_req and self.id_node < sender))))
 
             if nossa_prioridade:
-                self.log(f"Exclusão mutua: Adiou resposta para nó {
-                         sender} (Estou usando ou quero usar com mais prioridade")
+                self.log(f"Exclusão mutua: Adiou resposta para nó {sender} (Estou usando ou quero usar com mais prioridade")
                 self.respostas_adiadas.append(sender)
             else:
                 self.log(f"Exclusão mutua: Enviando OK para o nó {sender}")
