@@ -61,14 +61,12 @@ class Node:
             return False
 
         # evento então incrementamos antes de enviar
-        with self.lock:
-            self.lamport_clock += 1
-            relogio_atual = self.lamport_clock
+        self.incrementa_relogio()
 
         msg = {
             "sender": self.id_node,
             "type": tipo_msg,
-            "clock": relogio_atual,
+            "clock": self.lamport_clock,
             "content": conteudo
         }
 
@@ -90,7 +88,7 @@ class Node:
         conteudo = msg["content"]
         relogio_recebido = msg["clock"]
 
-        self.incrementa_relogio()
+        self.lamport_clock = max(self.lamport_clock, relogio_recebido) + 1
 
         self.log(f"Mensagem recebida do nó {sender} | Tipo: {tipo_msg} | Conteúdo: {conteudo}")
 
