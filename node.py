@@ -13,8 +13,20 @@ class Node:
         self.lock = threading.Lock()
         self.lamport_clock = 0
 
+        # coordenador com base no proprio id e id peers
+        self.coordenador = max(list(peers.keys()) + [id_node])
+        self.eleicao_ativa = False
+        self.recebeu_resposta = False
+
+        # exclusão mutua
+        self.estado = "RELEASED"
+        self.relogio_pedido = 0
+        self.respostas_necessarias = 0
+        self.respostas_adiadas = []
+
     def log(self, mensagem):
-        print(f"[Nó {self.id_node}] [Relogio: {self.lamport_clock}] {mensagem}")
+        print(f"[Nó {self.id_node}] [Relogio: {
+              self.lamport_clock}] {mensagem}")
 
     def incrementa_relogio(self):
         with self.lock:
@@ -31,7 +43,8 @@ class Node:
         while True:
             conn, _ = servidor.accept()
             # tava travando o servidor então resolvi usar thread
-            threading.Thread(target=self.prepara_cliente, args=(conn,), daemon=True).start()
+            threading.Thread(target=self.prepara_cliente,
+                             args=(conn,), daemon=True).start()
 
     def prepara_cliente(self, conn):
         try:
@@ -79,7 +92,115 @@ class Node:
 
         self.incrementa_relogio()
 
-        self.log(f"Mensagem recebida do nó {sender} | Tipo: {tipo_msg} | Conteúdo: {conteudo}")
+        self.log(f"Mensagem recebida do nó {sender} | Tipo: {
+                 tipo_msg} | Conteúdo: {conteudo}")
+
+        if tipo_msg == "BULLY_ELECTION":
+            if self.id_node > sender:
+                self.manda_mensagem(sender, "BULLY_ANSWER")
+                if not self.eleicao_ativa:
+                    threading.Thread(
+                        target=self.comeca_eleicao, daemon=True).start()
+
+        elif tipo_msg == "BULLY_ANSWER":
+            self.recebeu_resposta = True
+
+        elif tipo_msg == "BULLY_COORDINATOR":
+            self.coordenador = sender
+            self.eleicao_ativa = False
+            self.log(f"BULLY: Novo lider definido: nó {self.coordenador}")
+
+        elif tipo_msg == "RA_REQUEST":
+            relogio_req = conteudo["req_clock"]
+
+            with self.lock:
+                nossa_prioridade = (self.estado == "HELD" or (self.estado == "WANTED" and (
+                    self.relogio_recebido < relogio_req or (self.relogio_recebido == relogio_req and self.id_node < sender))))
+
+            if nossa_prioridade:
+                self.log(f"Exclusão mutua: Adiou resposta para nó {
+                         sender} (Estou usando ou quero usar com mais prioridade")
+                self.respostas_adiadas.append(sender)
+            else:
+                self.log(f"Exclusão mutua: Enviando OK para o nó {sender}")
+                self.manda_mensagem(sender, "RA_REPLY")
+
+        elif tipo_msg == "RA_REPLY":
+            with self.lock:
+                self.respostas_necessarias -= 1
+                self.log(f"Exclusão mutua: Recebemos OK. Restam {
+                         self.respostas_necessarias}")
+                if self.respostas_necessarias == 0 and self.estado == "WANTED":
+                    threading.Thread(
+                        target=self.entrar_secao_critica, daemon=True).start()
+
+    def comeca_eleicao(self):
+        self.log("BULLY: Iniciando eleição")
+        self.eleicao_ativa = True
+        self.recebeu_resposta = False
+
+        peers_maiores = [id for id in self.peers.keys() if id > self.id_node]
+        if not peers_maiores:
+            self.vira_coordenador()
+            return
+
+        for id in peers_maiores:
+            self.log(f"BULLY: Enviando ELECTION para o nó {id}")
+            self.manda_mensagem(id, "BULLY_ELECTION")
+
+        time.sleep(2)
+
+        if not self.recebeu_resposta and self.eleicao_ativa:
+            self.vira_coordenador()
+
+    def vira_coordenador(self):
+        self.coordenador = self.id_node
+        self.eleicao_ativa = False
+        self.log("BULLY: Venci a eleição, notificando outros nós")
+        for id in self.peers.keys():
+            self.manda_mensagem(id, "BULLY_COORDINATOR")
+
+    def pedir_secao_critica(self):
+        if self.estado != "RELEASED":
+            self.log(
+                "Exclusão mutua: Requisição ignorada. Já na fila ou usando o recurso")
+            return
+
+        self.estado = "WANTED"
+        self.relogio_pedido = self.lamport_clock
+        self.respostas_necessarias = len(self.peers)
+
+        self.log(f"Exclusão mutua: Requisitando região crítica com relogio [{
+                 self.relogio_pedido}]")
+        if self.respostas_necessarias == 0:
+            self.entrar_secao_critica()
+            return
+
+        for id in self.peers.keys():
+            if not self.manda_mensagem(id, "RA_REQUEST", {"req_clock": self.relogio_pedido}):
+                self.log(f"Exclusão mutua: Nó {
+                         id} parece offline. Desconsiderando resposta necessaria")
+                with self.lock:
+                    self.respostas_necessarias -= 1
+                    if self.respostas_necessarias == 0 and self.estado == "WANTED":
+                        self.entrar_secao_critica()
+
+    def entrar_secao_critica(self):
+        self.estado = "HELD"
+        self.log("Entramos na região crítica (acessando recurso compartilhado)")
+
+        # simulando o uso de um recurso
+        time.sleep(5)
+
+        self.log("Saindo da região crítica")
+        self.estado = "RELEASED"
+
+        with self.lock:
+            for id in self.respostas_adiadas:
+                self.log(f"Exclusão mutua: Liberando nó {
+                         id} que estava aguardando")
+                self.manda_mensagem(id, "RA_REPLY")
+            self.respostas_adiadas = []
 
 
 if __name__ == "__main__":
