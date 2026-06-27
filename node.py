@@ -67,8 +67,7 @@ class Node:
         tipo_msg = msg["type"]
         conteudo = msg["content"]
 
-        self.log(f"Mensagem recebida do nó {sender} | Tipo: {
-                 tipo_msg} | Conteúdo: {conteudo}")
+        self.log(f"Mensagem recebida do nó {sender} | Tipo: {tipo_msg} | Conteúdo: {conteudo}")
 
 
 if __name__ == "__main__":
