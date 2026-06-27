@@ -111,7 +111,7 @@ class Node:
 
             with self.lock:
                 nossa_prioridade = (self.estado == "HELD" or (self.estado == "WANTED" and (
-                    self.relogio_recebido < relogio_req or (self.relogio_recebido == relogio_req and self.id_node < sender))))
+                    self.relogio_pedido < relogio_req or (self.relogio_pedido == relogio_req and self.id_node < sender))))
 
             if nossa_prioridade:
                 self.log(f"Exclusão mutua: Adiou resposta para nó {sender} (Estou usando ou quero usar com mais prioridade")
