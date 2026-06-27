@@ -1,0 +1,4 @@
+Documentação sockets:
+  https://docs.python.org/pt-br/3/howto/sockets.html
+  https://realpython.com/python-sockets/
+  
