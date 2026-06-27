@@ -61,12 +61,14 @@ class Node:
             return False
 
         # evento então incrementamos antes de enviar
-        self.incrementa_relogio()
+        with self.lock:
+            self.lamport_clock += 1
+            relogio_atual = self.lamport_clock
 
         msg = {
             "sender": self.id_node,
             "type": tipo_msg,
-            "clock": self.lamport_clock,
+            "clock": relogio_atual,
             "content": conteudo
         }
 
