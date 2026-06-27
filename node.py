@@ -25,8 +25,7 @@ class Node:
         while True:
             conn, _ = servidor.accept()
             # tava travando o servidor então resolvi usar thread
-            threading.Thread(taget=self.prepara_cliente, args=(
-                conn,), daemon=True).start()
+            threading.Thread(target=self.prepara_cliente, args=(conn,), daemon=True).start()
 
     def prepara_cliente(self, conn):
         try:
