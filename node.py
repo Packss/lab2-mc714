@@ -124,8 +124,7 @@ class Node:
         elif tipo_msg == "RA_REPLY":
             with self.lock:
                 self.respostas_necessarias -= 1
-                self.log(f"Exclusão mutua: Recebemos OK. Restam {
-                         self.respostas_necessarias}")
+                self.log(f"Exclusão mutua: Recebemos OK. Restam {self.respostas_necessarias}")
                 if self.respostas_necessarias == 0 and self.estado == "WANTED":
                     threading.Thread(
                         target=self.entrar_secao_critica, daemon=True).start()
@@ -158,24 +157,21 @@ class Node:
 
     def pedir_secao_critica(self):
         if self.estado != "RELEASED":
-            self.log(
-                "Exclusão mutua: Requisição ignorada. Já na fila ou usando o recurso")
+            self.log("Exclusão mutua: Requisição ignorada. Já na fila ou usando o recurso")
             return
 
         self.estado = "WANTED"
         self.relogio_pedido = self.lamport_clock
         self.respostas_necessarias = len(self.peers)
 
-        self.log(f"Exclusão mutua: Requisitando região crítica com relogio [{
-                 self.relogio_pedido}]")
+        self.log(f"Exclusão mutua: Requisitando região crítica com relogio [{self.relogio_pedido}]")
         if self.respostas_necessarias == 0:
             self.entrar_secao_critica()
             return
 
         for id in self.peers.keys():
             if not self.manda_mensagem(id, "RA_REQUEST", {"req_clock": self.relogio_pedido}):
-                self.log(f"Exclusão mutua: Nó {
-                         id} parece offline. Desconsiderando resposta necessaria")
+                self.log(f"Exclusão mutua: Nó {id} parece offline. Desconsiderando resposta necessaria")
                 with self.lock:
                     self.respostas_necessarias -= 1
                     if self.respostas_necessarias == 0 and self.estado == "WANTED":
@@ -193,8 +189,7 @@ class Node:
 
         with self.lock:
             for id in self.respostas_adiadas:
-                self.log(f"Exclusão mutua: Liberando nó {
-                         id} que estava aguardando")
+                self.log(f"Exclusão mutua: Liberando nó {id} que estava aguardando")
                 self.manda_mensagem(id, "RA_REPLY")
             self.respostas_adiadas = []
 
